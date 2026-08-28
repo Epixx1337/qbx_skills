@@ -1,0 +1,13 @@
+{
+    "radial": {
+        "skills": "Skills"
+    },
+    "notify": {
+        "level_up": "%s reached level %d",
+        "switch_requires_max": "You must max out your current specialization first",
+        "unlock_failed": "You cannot unlock that skill",
+        "editor_failed": "The change could not be saved",
+        "tree_job_locked": "Your job does not give you access to that specialization",
+        "tree_job_lost": "You lost access to %s, the specialization has been deactivated"
+    }
+}
