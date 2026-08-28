@@ -18,6 +18,7 @@ return {
     inactivePerksApply = false, -- unlocked skills keep working while their tree is not the active one
 
     notifyOnLevelUp = true,
+    seedExampleTrees = true, -- insert the example trees from skills_seed.sql on start; disable to build trees from scratch or to stop deleted example skills from coming back
 
     stats = {
         enabled = true, -- qbx_skills applies max_health, max_armour and stamina bonuses to the ped itself

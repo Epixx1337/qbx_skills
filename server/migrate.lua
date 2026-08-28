@@ -1,3 +1,5 @@
+local sharedConfig = require 'config.shared'
+
 local migrated = false
 
 function AwaitMigration()
@@ -10,14 +12,20 @@ local columns = {
     },
 }
 
-MySQL.ready(function()
-    local sql = LoadResourceFile(cache.resource, 'skills.sql')
-    if sql then
-        for statement in sql:gmatch('[^;]+') do
-            if statement:match('%S') then
-                pcall(MySQL.query.await, statement)
-            end
+local function runFile(fileName)
+    local sql = LoadResourceFile(cache.resource, fileName)
+    if not sql then return end
+    for statement in sql:gmatch('[^;]+') do
+        if statement:match('%S') then
+            pcall(MySQL.query.await, statement)
         end
+    end
+end
+
+MySQL.ready(function()
+    runFile('skills.sql')
+    if sharedConfig.seedExampleTrees then
+        runFile('skills_seed.sql')
     end
 
     for tableName, defs in pairs(columns) do

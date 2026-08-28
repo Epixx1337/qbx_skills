@@ -64,7 +64,8 @@ panel inspects and adjusts any online player's progression.
 1. Ensure the resource after `qbx_core` (inside a `[qbx]` folder, `ensure [qbx]` covers it).
 2. Build the UI once: `cd web && bun install && bun run build` (any npm-compatible tool works).
 3. The tables in `skills.sql` are created automatically on first start, along with three
-   example trees. If the database user cannot `CREATE`, run `skills.sql` by hand.
+   example trees from `skills_seed.sql` (disable with `seedExampleTrees = false`). If the
+   database user cannot `CREATE`, run the .sql files by hand.
 
 ## Configuration
 
@@ -85,6 +86,7 @@ panel inspects and adjusts any online player's progression.
 | `stats.baseHealth/baseArmour/baseStamina` | `200/100/60` | values with no perks |
 | `stats.healthCap/armourCap/staminaCap` | `25/25/40` | highest total bonus a build can reach |
 | `notifyOnLevelUp` | `true` | notify the player on level up |
+| `seedExampleTrees` | `true` | insert the example trees on start; disable to build from scratch or keep deleted example skills gone |
 
 ## Exports
 
