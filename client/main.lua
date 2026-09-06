@@ -42,7 +42,7 @@ local function removeRadial()
     lib.removeRadialItem(sharedConfig.radial.id)
 end
 
-local function applyStats()
+local function applyStats(fullHeal)
     local stats = sharedConfig.stats
     if not stats.enabled or not LocalPlayer.state.isLoggedIn then return end
 
@@ -51,7 +51,7 @@ local function applyStats()
     local stamina = math.min(100, stats.baseStamina + math.min(math.max(synced.bonuses.stamina or 0, 0), stats.staminaCap))
 
     SetEntityMaxHealth(cache.ped, maxHealth)
-    if GetEntityHealth(cache.ped) > maxHealth then SetEntityHealth(cache.ped, maxHealth) end
+    if fullHeal or GetEntityHealth(cache.ped) > maxHealth then SetEntityHealth(cache.ped, maxHealth) end
     SetPlayerMaxArmour(cache.playerId, maxArmour)
     if GetPedArmour(cache.ped) > maxArmour then SetPedArmour(cache.ped, maxArmour) end
     StatSetInt(`MP0_STAMINA`, stamina, true)
@@ -74,11 +74,14 @@ RegisterNetEvent('qbx_skills:client:sync', function(data)
     if IsUIOpen() then pushData() end
 end)
 
-AddEventHandler('playerSpawned', applyStats)
+AddEventHandler('playerSpawned', function()
+    applyStats()
+end)
 
 ---Medical bridges call this after their script touched the ped's health or armour
-function ReapplyStats()
-    applyStats()
+---@param fullHeal boolean? also fill health up to the new maximum, for revives and heals
+function ReapplyStats(fullHeal)
+    applyStats(fullHeal == true)
 end
 
 RegisterNetEvent('qbx_skills:client:treesChanged', function()

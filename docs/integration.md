@@ -234,43 +234,71 @@ so all of them ship enabled and only the matching one does anything:
 
 | bridge | reapplies after |
 | --- | --- |
-| `bridge/qbx_medical.lua` | `qbx_medical:client:playerRevived` |
-| `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:onBedExit`, `randol_medical:client:onRespawn`, and the persisted health restore after character load |
+| `bridge/qbx_medical.lua` | `qbx_medical:client:playerRevived` (full heal) |
+| `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:client:onRespawn` (full heal), `randol_medical:onBedExit`, and the persisted health restore after character load |
 
-For any other medical script copy `bridge/custom.lua`, put your resource name in the guard,
-and hook the events your script fires when it heals, revives or respawns a player — the file
-is picked up automatically by the `bridge/*.lua` glob in the manifest. Huds keep working the
-same way regardless of the medical script: read the `qbx_skills_stats` statebag described
-above.
+`ReapplyStats(true)` also fills health up to the boosted maximum. Medical scripts heal to their
+own idea of "full" — 200 game units — so without it a revived player with Thick Skin would
+stand up at 200/205 instead of full. Pass `true` on revive, respawn and check-in; leave it off
+for anything that must keep the current health, like randol_medical's persisted health restore
+on load.
 
-### Telling huds about the buffed values
+#### Example: more health with randol_medical
 
-Boosted maximums mean `health = GetEntityHealth(ped) - 100` can now exceed 100, and a hud that
-hardcodes `/ 100` will overflow its bar. qbx_skills publishes the applied values on the player
-statebag **`qbx_skills_stats`** (`{ maxHealth, maxArmour, stamina }`, game units), and the same
-table is available via the client export `exports.qbx_skills:GetStats()`.
+Nothing is configured inside randol_medical. The extra health comes from the tree:
 
-Scale a health bar against the real maximum:
+1. In the editor, give a skill a `max_health` bonus — the seeded Thick Skin carries `5`,
+   Unbreakable `10`. Values are display hp, so `5` turns 100 hp into 105. `stats.healthCap`
+   in `config/shared.lua` bounds what a full build can stack.
+2. The moment the skill is unlocked, qbx_skills raises the ped's maximum (`SetEntityMaxHealth`
+   to 205) and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag.
+3. randol_medical revives, respawns or checks the player in → it heals them to its own full
+   (200) → `bridge/randol_medical.lua` runs `ReapplyStats(true)` 250 ms later, restoring the
+   205 maximum and filling health to it. On relog, randol restores the player's persisted
+   health and armour ~2 s after load; the bridge reapplies the maximum 3 s after load without
+   touching the restored value.
+4. randol's own thresholds are absolute game units and need no change — the knockout
+   threshold (`Knockout.Health`) and `PostAdrenalineHealth` in its `shared.lua` simply sit
+   further below a boosted player's maximum. Its heal items add fixed amounts, so they heal
+   toward the boosted maximum automatically.
+
+The same walk-through applies to `max_armour` (randol persists armour too) and, without any
+medical involvement, to `stamina`.
+
+#### Example: another medical script
+
+Copy `bridge/custom.lua`, put your resource name in the guard, and hook the events your
+script fires when it heals, revives or respawns a player — the file is picked up automatically
+by the `bridge/*.lua` glob in the manifest:
 
 ```lua
--- e.g. qbx_hud/client/main.lua where the hud data is assembled
-local stats = LocalPlayer.state.qbx_skills_stats
-local maxHealth = (stats?.maxHealth or 200) - 100
-local healthPercent = (GetEntityHealth(cache.ped) - 100) / maxHealth * 100
-```
+if GetResourceState('your_medical') ~= 'started' then return end
 
-React to changes instead of polling (the statebag is replicated, so this also works in
-server-side or other-player contexts):
-
-```lua
-AddStateBagChangeHandler('qbx_skills_stats', nil, function(bagName, _, value)
-    local player = GetPlayerFromStateBagName(bagName)
-    if player ~= cache.playerId then return end
-    -- value is { maxHealth, maxArmour, stamina } or nil on logout — refresh hud scaling here
+RegisterNetEvent('your_medical:client:revived', function()
+    SetTimeout(250, function()
+        ReapplyStats(true)
+    end)
 end)
 ```
 
-If the statebag is `nil` (resource not running, player not loaded) fall back to 200/100.
+#### Example: healing against the real maximum
+
+Any script that heals by fraction should read the boosted maximum instead of assuming 200.
+Client side use the export, server side read the replicated statebag:
+
+```lua
+-- client: heal half of the missing health
+local stats = exports.qbx_skills:GetStats()
+local maxHealth = stats and stats.maxHealth or 200
+SetEntityHealth(cache.ped, math.min(maxHealth, GetEntityHealth(cache.ped) + math.floor((maxHealth - 100) / 2)))
+
+-- server: what "full" means for this player, e.g. inside a heal item or an EMS action
+local stats = Player(src).state.qbx_skills_stats
+local maxHealth = stats and stats.maxHealth or 200
+```
+
+Huds keep working the same way regardless of the medical script: read the `qbx_skills_stats`
+statebag described above.
 
 ## Job-locked trees
 
