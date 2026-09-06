@@ -76,10 +76,10 @@ end)
 
 AddEventHandler('playerSpawned', applyStats)
 
--- qbx_medical resets max health to 200 on revive, reapply after it ran
-RegisterNetEvent('qbx_medical:client:playerRevived', function()
-    SetTimeout(250, applyStats)
-end)
+---Medical bridges call this after their script touched the ped's health or armour
+function ReapplyStats()
+    applyStats()
+end
 
 RegisterNetEvent('qbx_skills:client:treesChanged', function()
     if IsUIOpen() then pushData() end

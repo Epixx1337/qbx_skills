@@ -19,6 +19,7 @@ client_scripts {
     '@qbx_core/modules/playerdata.lua',
     'client/nui.lua',
     'client/main.lua',
+    'bridge/*.lua',
 }
 
 server_scripts {

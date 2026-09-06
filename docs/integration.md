@@ -220,10 +220,28 @@ stats = {
 },
 ```
 
-Values are reapplied on spawn, on revive (after qbx_medical resets max health to 200), and
-whenever the player's skills change — including switching to a tree without the perks, which
-drops them back to base. Set `stats.enabled = false` if a different resource manages these
-natives and read the bonuses yourself with `GetSkillBonus`.
+Values are reapplied on spawn, whenever the player's skills change (including switching to a
+tree without the perks, which drops them back to base), and after the medical script touches
+the ped — see the medical bridge below. Set `stats.enabled = false` if a different resource
+manages these natives and read the bonuses yourself with `GetSkillBonus`.
+
+### Medical script bridge
+
+Medical scripts rewrite health and max health on revive, respawn and hospital check-in, which
+would silently drop the perks. `bridge/` holds one small client file per medical script that
+calls `ReapplyStats()` after those moments. Every bridge guards on its resource being started,
+so all of them ship enabled and only the matching one does anything:
+
+| bridge | reapplies after |
+| --- | --- |
+| `bridge/qbx_medical.lua` | `qbx_medical:client:playerRevived` |
+| `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:onBedExit`, `randol_medical:client:onRespawn`, and the persisted health restore after character load |
+
+For any other medical script copy `bridge/custom.lua`, put your resource name in the guard,
+and hook the events your script fires when it heals, revives or respawns a player — the file
+is picked up automatically by the `bridge/*.lua` glob in the manifest. Huds keep working the
+same way regardless of the medical script: read the `qbx_skills_stats` statebag described
+above.
 
 ### Telling huds about the buffed values
 

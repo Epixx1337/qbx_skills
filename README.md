@@ -37,6 +37,8 @@ attempt awards nothing because the active specialization is a civilian tree and
   levels, points and unlocked skills, plus controls to grant XP, levels or talent points.
 - **Built-in stat perks** — `max_health`, `max_armour` and `stamina` bonus keys are applied
   to the ped by qbx_skills itself and published to huds via the `qbx_skills_stats` statebag.
+  Bridges for qbx_medical and randol_medical keep the perks applied through revives, respawns
+  and check-ins; any other medical script gets a one-file bridge from the template in `bridge/`.
 - **Job-locked trees** — restrict a tree to jobs (with minimum grades) in the editor; the
   lock is enforced server-side and the tree auto-deactivates when the player loses the job.
 - **Logging** — every unlock, level up, tree switch, admin grant and editor change goes
@@ -167,6 +169,11 @@ whatever fits your integration. Four keys are handled by qbx_skills itself:
 The applied stat values are published on the replicated `qbx_skills_stats` player statebag
 (`{ maxHealth, maxArmour, stamina }`, game units) and via the client `GetStats()` export, so
 huds can scale their bars against the real maximums.
+
+Medical scripts overwrite health and max health on revive, respawn and check-in, so `bridge/`
+re-applies the perks after those moments. qbx_medical and randol_medical are supported out of
+the box, both auto-detected; for anything else copy `bridge/custom.lua`, set your resource name
+and hook its revive/respawn events — see [docs/integration.md](docs/integration.md#medical-script-bridge).
 
 ## Integrating
 
