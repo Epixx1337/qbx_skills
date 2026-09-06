@@ -282,6 +282,92 @@ the constant for `GetEntityMaxHealth(ped)`, a one-line change worth requesting. 
 never heals on its own: outside a bridge's short settle window after a heal event, no code
 here writes health.
 
+#### Example: an EMS tree on randol_medical's open handlers
+
+randol_medical ships its integration points unencrypted in `client/cl_open.lua`,
+`server/sv_open.lua` and `shared.lua`, and every one of them is a place qbx_skills can plug
+into. The bridge already consumes `randol_medical:onRevive`, `onCheckIn`, `onBedExit`,
+`client:onRespawn` and `client:revivePlayer` — adding your own handlers for the same events
+alongside it is fine.
+
+**Feed a job-locked EMS tree.** Create a tree in the editor, lock it to `ambulance`, and award
+its experience from the two open payment hooks in `sv_open.lua`, which run once per treated
+patient:
+
+```lua
+-- randol_medical/server/sv_open.lua
+function PayForRevive(src)
+    local player = GetPlayer(src)
+    if not player then return end
+
+    addMoney(player, 'bank', Server.PayPerRevive.amount)
+    DoNotification(src, ('You received $%s for treating the patient.'):format(Server.PayPerRevive.amount))
+    exports.qbx_skills:AddTreeXp(src, 'paramedic', 30)
+end
+
+function PayForHeal(src)
+    -- existing body ...
+    exports.qbx_skills:AddTreeXp(src, 'paramedic', 15)
+end
+```
+
+`AddTreeXp` targets the tree by name, so it works whether or not the medic has it active;
+use `AddXp(src, 30, 'ems')` instead if the tree's category should gate it like every other
+activity.
+
+**Read perks inside randol's open code.** Any of its open functions can consult the player's
+skills. A discount on the automatic bill, server side:
+
+```lua
+-- randol_medical/server/sv_open.lua
+function AutoBillPlayer(id, job)
+    if not Server.AutoBill.enable then return end
+
+    local player = GetPlayer(id)
+    if not player then return end
+
+    local amount = math.floor(Server.AutoBill.amount * (1 - exports.qbx_skills:GetSkillBonus(id, 'medical_discount')))
+    RemoveMoney(player, 'bank', amount)
+    -- society deposit as before, with `amount`
+end
+```
+
+A shorter crutch walk after leaving the bed, client side:
+
+```lua
+-- randol_medical/client/cl_open.lua
+AddEventHandler('randol_medical:onBedExit', function()
+    if exports.qbx_skills:HasSkill('quick_recovery') then return end
+    forceWalkEffect(1)
+end)
+```
+
+An easier civilian revive minigame for a first-aid skill — `CivReviveMinigame` in
+`shared.lua` only ever runs on the client, so the client export is safe there:
+
+```lua
+-- randol_medical/shared.lua
+CivReviveMinigame = function()
+    local trained = exports.qbx_skills:HasSkill('first_aid')
+    return lib.skillCheck(trained and { 'easy', 'easy' } or { 'medium', 'medium', 'hard' })
+end,
+```
+
+**Use the statebags as guards.** Activities should not pay experience to someone who is
+down. Server side the states are replicated:
+
+```lua
+local state = Player(src).state
+if state.dead or state.laststand then return end
+exports.qbx_skills:AddXp(src, 15, 'crime')
+```
+
+Client side the same flags are `LocalPlayer.state.dead`, `.laststand`, `.knockedOut`,
+`.isInHospitalBed` and the numeric `.bleeding`. The server hooks `randol_medical:server:death`,
+`randol_medical:server:lastStand` (both `(src, state)`) and `randol_medical:server:onRespawn`
+(`(src)`) fire when those states change, which is where a death penalty or a respawn log
+belongs if you want one.
+
 #### Example: another medical script
 
 Copy `bridge/custom.lua`, put your resource name in the guard, and hook the events your

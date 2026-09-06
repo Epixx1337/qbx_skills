@@ -174,8 +174,9 @@ huds can scale their bars against the real maximums.
 Medical scripts overwrite health and max health on revive, respawn and check-in, so `bridge/`
 re-applies the perks after those moments and fills health to the boosted maximum. qbx_medical
 and randol_medical are supported out of the box, both auto-detected; for anything else copy
-`bridge/custom.lua`, set your resource name and hook its revive/respawn events. A worked
-"more health with randol_medical" walk-through is in
+`bridge/custom.lua`, set your resource name and hook its revive/respawn events. Worked
+randol_medical examples — the health walk-through and an EMS tree fed from its open
+`PayForRevive`/`PayForHeal` hooks — are in
 [docs/integration.md](docs/integration.md#medical-script-bridge).
 
 ## Integrating
