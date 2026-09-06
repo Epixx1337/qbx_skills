@@ -251,7 +251,9 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
    Unbreakable `10`. Values are display hp, so `5` turns 100 hp into 105. `stats.healthCap`
    in `config/shared.lua` bounds what a full build can stack.
 2. The moment the skill is unlocked, qbx_skills raises the ped's maximum (`SetEntityMaxHealth`
-   to 205) and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag.
+   to 205), adds the gained 5 to the player's current health so the bar grows instead of
+   showing a gap, and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag.
+   Losing the perk (switching tree) only lowers the cap and clamps health to it.
 3. randol_medical revives, respawns or checks the player in → it heals them to its own full
    (200) → `bridge/randol_medical.lua` runs `ReapplyStats(true)` 250 ms later, restoring the
    205 maximum and filling health to it. On relog, randol restores the player's persisted
