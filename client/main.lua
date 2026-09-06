@@ -222,6 +222,13 @@ end)
 
 exports('OpenSkills', OpenSkills)
 
+---Reapply the stat perks from another resource, e.g. a medical script's own open handlers
+---@param fullHeal boolean?
+---@param settleMs number?
+exports('ReapplyStats', function(fullHeal, settleMs)
+    ReapplyStats(fullHeal, settleMs)
+end)
+
 CreateThread(function()
     if LocalPlayer.state.isLoggedIn then addRadial() end
 end)

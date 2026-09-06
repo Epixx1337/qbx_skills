@@ -246,6 +246,30 @@ like randol_medical's persisted health restore on load. `settleMs` keeps reapply
 times a bridge cannot know, so a single write would just get overwritten. A few seconds of
 settling wins that race without any knowledge of the script's internals.
 
+**Prefer keeping the hook in the medical script's own files?** `ReapplyStats` is also a client
+export, so the same call can live in randol_medical's `cl_open.lua` instead of the bridge —
+handy when you already keep every medical hook there. Delete `bridge/randol_medical.lua` if you
+do, so the perks are not reapplied twice:
+
+```lua
+-- randol_medical/client/cl_open.lua
+AddEventHandler('randol_medical:onRevive', function()
+    exports.qbx_skills:ReapplyStats(true, 4000)
+end)
+
+AddEventHandler('randol_medical:onCheckIn', function()
+    exports.qbx_skills:ReapplyStats(true, 4000)
+end)
+
+RegisterNetEvent('randol_medical:client:onRespawn', function()
+    exports.qbx_skills:ReapplyStats(true, 4000)
+end)
+```
+
+The timing is the same either way: `onRevive` fires before randol writes its health, which
+is why the settle window stays. Only randol itself could remove the need for it, by healing
+to `GetEntityMaxHealth(ped)` instead of 200.
+
 #### Example: more health with randol_medical
 
 Nothing is configured inside randol_medical. The extra health comes from the tree:

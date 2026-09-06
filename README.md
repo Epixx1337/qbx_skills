@@ -150,6 +150,7 @@ exports.qbx_skills:GetLevel(tree)            ---@return integer
 exports.qbx_skills:GetActiveTree(category)   ---@return string?
 exports.qbx_skills:GetActiveTrees()          ---@return table<string, string>
 exports.qbx_skills:OpenSkills()              -- open the UI programmatically
+exports.qbx_skills:ReapplyStats(fullHeal, settleMs) -- reapply stat perks from a medical script's own handlers
 ```
 
 Client reads are for UX only — anything that grants money or items must check the server
