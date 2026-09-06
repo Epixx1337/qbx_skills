@@ -42,8 +42,6 @@ local function removeRadial()
     lib.removeRadialItem(sharedConfig.radial.id)
 end
 
-local lastMaxHealth
-
 local function applyStats(fullHeal)
     local stats = sharedConfig.stats
     if not stats.enabled or not LocalPlayer.state.isLoggedIn then return end
@@ -52,16 +50,8 @@ local function applyStats(fullHeal)
     local maxArmour = stats.baseArmour + math.min(math.max(synced.bonuses.max_armour or 0, 0), stats.armourCap)
     local stamina = math.min(100, stats.baseStamina + math.min(math.max(synced.bonuses.stamina or 0, 0), stats.staminaCap))
 
-    local health = GetEntityHealth(cache.ped)
     SetEntityMaxHealth(cache.ped, maxHealth)
-    if fullHeal then
-        SetEntityHealth(cache.ped, maxHealth)
-    elseif lastMaxHealth and maxHealth > lastMaxHealth and health > 100 then
-        SetEntityHealth(cache.ped, math.min(maxHealth, health + maxHealth - lastMaxHealth))
-    elseif health > maxHealth then
-        SetEntityHealth(cache.ped, maxHealth)
-    end
-    lastMaxHealth = maxHealth
+    if fullHeal or GetEntityHealth(cache.ped) > maxHealth then SetEntityHealth(cache.ped, maxHealth) end
     SetPlayerMaxArmour(cache.playerId, maxArmour)
     if GetPedArmour(cache.ped) > maxArmour then SetPedArmour(cache.ped, maxArmour) end
     StatSetInt(`MP0_STAMINA`, stamina, true)
@@ -128,7 +118,6 @@ RegisterNetEvent('qbx_core:client:playerLoggedOut', function()
     removeRadial()
     if IsUIOpen() then CloseUI() end
     synced = { actives = {}, trees = {}, bonuses = {} }
-    lastMaxHealth = nil
     LocalPlayer.state:set('qbx_skills_stats', nil, true)
 end)
 

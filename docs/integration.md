@@ -254,9 +254,9 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
    Unbreakable `10`. Values are display hp, so `5` turns 100 hp into 105. `stats.healthCap`
    in `config/shared.lua` bounds what a full build can stack.
 2. The moment the skill is unlocked, qbx_skills raises the ped's maximum (`SetEntityMaxHealth`
-   to 205), adds the gained 5 to the player's current health so the bar grows instead of
-   showing a gap, and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag.
-   Losing the perk (switching tree) only lowers the cap and clamps health to it.
+   to 205) and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag. Nothing
+   heals: the player keeps their current health and grows into the new room through normal
+   healing. Losing the perk (switching tree) lowers the cap and clamps health to it.
 3. randol_medical revives, respawns or checks the player in → it heals them to its own full
    (200) somewhere during its fade → `bridge/randol_medical.lua` runs `ReapplyStats(true, 4000)`,
    which keeps restoring the 205 maximum and filling health to it for four seconds, so
@@ -270,6 +270,17 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
 
 The same walk-through applies to `max_armour` (randol persists armour too) and, without any
 medical involvement, to `stamina`.
+
+**The cap you cannot see.** randol_medical's revive and check-in write health to a literal
+200 inside its escrowed code — a revived player with a 215 maximum shows `200/215` until the
+bridge fills them, which is exactly why the bridge treats revive and check-in as full heals.
+No readable config controls it. Its heal items and EMS heals may carry the same constant:
+test it once by using a bandage at `200/215` — if health rises above 200 randol clamps to
+the ped's real maximum and every heal already benefits from the perk; if it stays at 200,
+randol clamps at 200 and only revive/check-in reach the boosted value until the author swaps
+the constant for `GetEntityMaxHealth(ped)`, a one-line change worth requesting. qbx_skills
+never heals on its own: outside a bridge's short settle window after a heal event, no code
+here writes health.
 
 #### Example: another medical script
 
