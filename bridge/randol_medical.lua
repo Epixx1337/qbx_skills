@@ -1,18 +1,21 @@
 if GetResourceState('randol_medical') ~= 'started' then return end
 
----@param fullHeal boolean?
-local function reapply(fullHeal)
-    SetTimeout(250, function()
-        ReapplyStats(fullHeal)
-    end)
+-- randol_medical writes health after its own fades and animations, so every hook keeps
+-- reapplying for a few seconds instead of racing it once
+local function fullHeal()
+    ReapplyStats(true, 4000)
 end
 
-AddEventHandler('randol_medical:onRevive', function() reapply(true) end)
-AddEventHandler('randol_medical:onCheckIn', function() reapply(true) end)
-RegisterNetEvent('randol_medical:client:onRespawn', function() reapply(true) end)
-AddEventHandler('randol_medical:onBedExit', function() reapply() end)
+AddEventHandler('randol_medical:onRevive', fullHeal)
+AddEventHandler('randol_medical:onCheckIn', fullHeal)
+RegisterNetEvent('randol_medical:client:onRespawn', fullHeal)
+RegisterNetEvent('randol_medical:client:revivePlayer', fullHeal)
+
+AddEventHandler('randol_medical:onBedExit', function()
+    ReapplyStats(false, 2000)
+end)
 
 -- randol_medical restores persisted health and armour a couple of seconds after the character loads
 AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
-    SetTimeout(3000, ReapplyStats)
+    ReapplyStats(false, 8000)
 end)

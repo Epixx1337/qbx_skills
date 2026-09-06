@@ -90,8 +90,18 @@ end)
 
 ---Medical bridges call this after their script touched the ped's health or armour
 ---@param fullHeal boolean? also fill health up to the new maximum, for revives and heals
-function ReapplyStats(fullHeal)
+---@param settleMs number? keep reapplying for this long so the medical script's own delayed writes cannot undo it
+function ReapplyStats(fullHeal, settleMs)
     applyStats(fullHeal == true)
+    if not settleMs then return end
+
+    local deadline = GetGameTimer() + settleMs
+    CreateThread(function()
+        while GetGameTimer() < deadline do
+            Wait(500)
+            applyStats(fullHeal == true)
+        end
+    end)
 end
 
 RegisterNetEvent('qbx_skills:client:treesChanged', function()

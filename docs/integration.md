@@ -234,14 +234,17 @@ so all of them ship enabled and only the matching one does anything:
 
 | bridge | reapplies after |
 | --- | --- |
-| `bridge/qbx_medical.lua` | `qbx_medical:client:playerRevived` (full heal) |
-| `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:client:onRespawn` (full heal), `randol_medical:onBedExit`, and the persisted health restore after character load |
+| `bridge/qbx_medical.lua` | `qbx_medical:client:playerRevived` (full heal, 3 s settle) |
+| `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:client:onRespawn`, `randol_medical:client:revivePlayer` (full heal, 4 s settle), `randol_medical:onBedExit` (2 s settle), and the persisted health restore after character load (8 s settle) |
 
-`ReapplyStats(true)` also fills health up to the boosted maximum. Medical scripts heal to their
-own idea of "full" — 200 game units — so without it a revived player with Thick Skin would
-stand up at 200/205 instead of full. Pass `true` on revive, respawn and check-in; leave it off
-for anything that must keep the current health, like randol_medical's persisted health restore
-on load.
+`ReapplyStats(fullHeal, settleMs)` takes two arguments. `fullHeal = true` also fills health up
+to the boosted maximum: medical scripts heal to their own idea of "full" — 200 game units — so
+without it a revived player with Thick Skin would stand up at 200/205 instead of full. Pass it
+on revive, respawn and check-in; leave it off for anything that must keep the current health,
+like randol_medical's persisted health restore on load. `settleMs` keeps reapplying every
+500 ms for that long — medical scripts write health after their own fades and animations, at
+times a bridge cannot know, so a single write would just get overwritten. A few seconds of
+settling wins that race without any knowledge of the script's internals.
 
 #### Example: more health with randol_medical
 
@@ -255,10 +258,11 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
    showing a gap, and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag.
    Losing the perk (switching tree) only lowers the cap and clamps health to it.
 3. randol_medical revives, respawns or checks the player in → it heals them to its own full
-   (200) → `bridge/randol_medical.lua` runs `ReapplyStats(true)` 250 ms later, restoring the
-   205 maximum and filling health to it. On relog, randol restores the player's persisted
-   health and armour ~2 s after load; the bridge reapplies the maximum 3 s after load without
-   touching the restored value.
+   (200) somewhere during its fade → `bridge/randol_medical.lua` runs `ReapplyStats(true, 4000)`,
+   which keeps restoring the 205 maximum and filling health to it for four seconds, so
+   whenever randol's write lands, the last word is 205/205. On relog, randol restores the
+   player's persisted health and armour ~2 s after load; the bridge settles the maximum for
+   8 s after load without touching the restored value.
 4. randol's own thresholds are absolute game units and need no change — the knockout
    threshold (`Knockout.Health`) and `PostAdrenalineHealth` in its `shared.lua` simply sit
    further below a boosted player's maximum. Its heal items add fixed amounts, so they heal
@@ -277,9 +281,7 @@ by the `bridge/*.lua` glob in the manifest:
 if GetResourceState('your_medical') ~= 'started' then return end
 
 RegisterNetEvent('your_medical:client:revived', function()
-    SetTimeout(250, function()
-        ReapplyStats(true)
-    end)
+    ReapplyStats(true, 3000)
 end)
 ```
 
