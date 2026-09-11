@@ -238,8 +238,8 @@ so all of them ship enabled and only the matching one does anything:
 | `bridge/randol_medical.lua` | `randol_medical:onRevive`, `randol_medical:onCheckIn`, `randol_medical:client:onRespawn`, `randol_medical:client:revivePlayer` (full heal, 4 s settle), `randol_medical:onBedExit` (2 s settle), and the persisted health restore after character load (8 s settle) |
 
 `ReapplyStats(fullHeal, settleMs)` takes two arguments. `fullHeal = true` also fills health up
-to the boosted maximum: medical scripts heal to their own idea of "full" — 200 game units — so
-without it a revived player with Thick Skin would stand up at 200/205 instead of full. Pass it
+to the boosted maximum, so a revived player with Thick Skin stands up at 205/205 instead of at
+whatever value the medical script wrote. Pass it
 on revive, respawn and check-in; leave it off for anything that must keep the current health,
 like randol_medical's persisted health restore on load. `settleMs` keeps reapplying every
 500 ms for that long — medical scripts write health after their own fades and animations, at
@@ -267,8 +267,7 @@ end)
 ```
 
 The timing is the same either way: `onRevive` fires before randol writes its health, which
-is why the settle window stays. Only randol itself could remove the need for it, by healing
-to `GetEntityMaxHealth(ped)` instead of 200.
+is why the settle window stays.
 
 #### Example: more health with randol_medical
 
@@ -281,8 +280,8 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
    to 205) and publishes `{ maxHealth = 205, ... }` on the `qbx_skills_stats` statebag. Nothing
    heals: the player keeps their current health and grows into the new room through normal
    healing. Losing the perk (switching tree) lowers the cap and clamps health to it.
-3. randol_medical revives, respawns or checks the player in → it heals them to its own full
-   (200) somewhere during its fade → `bridge/randol_medical.lua` runs `ReapplyStats(true, 4000)`,
+3. randol_medical revives, respawns or checks the player in → it writes health somewhere
+   during its fade → `bridge/randol_medical.lua` runs `ReapplyStats(true, 4000)`,
    which keeps restoring the 205 maximum and filling health to it for four seconds, so
    whenever randol's write lands, the last word is 205/205. On relog, randol restores the
    player's persisted health and armour ~2 s after load; the bridge settles the maximum for
@@ -295,16 +294,26 @@ Nothing is configured inside randol_medical. The extra health comes from the tre
 The same walk-through applies to `max_armour` (randol persists armour too) and, without any
 medical involvement, to `stamina`.
 
-**The cap you cannot see.** randol_medical's revive and check-in write health to a literal
-200 inside its escrowed code — a revived player with a 215 maximum shows `200/215` until the
-bridge fills them, which is exactly why the bridge treats revive and check-in as full heals.
-No readable config controls it. Its heal items and EMS heals may carry the same constant:
-test it once by using a bandage at `200/215` — if health rises above 200 randol clamps to
-the ped's real maximum and every heal already benefits from the perk; if it stays at 200,
-randol clamps at 200 and only revive/check-in reach the boosted value until the author swaps
-the constant for `GetEntityMaxHealth(ped)`, a one-line change worth requesting. qbx_skills
-never heals on its own: outside a bridge's short settle window after a heal event, no code
-here writes health.
+**Two max-health natives, one real ceiling.** `SetEntityMaxHealth` and `SetPedMaxHealth` write
+different fields, and a player ped's health is clamped against the `SetPedMaxHealth` one while
+`GetEntityMaxHealth` reads back the other. Raising only the first is what produces a confusing
+`200/215`: the bar claims 215, but nothing can push health past the untouched 200 ceiling — not
+a heal item, not a revive, not qbx_skills. Writing both is the whole fix, and it has nothing to
+do with the medical script; the same trap catches any resource that raises max health. Confirm
+it in a few seconds with a test command:
+
+```lua
+RegisterCommand('maxhealth', function()
+    local ped = cache.ped
+    SetEntityMaxHealth(ped, 215)
+    SetPedMaxHealth(ped, 215) -- the one that actually gates SetEntityHealth on a player ped
+    SetEntityHealth(ped, 215)
+    print(('Health: %d / %d'):format(GetEntityHealth(ped), GetEntityMaxHealth(ped)))
+end, false)
+```
+
+qbx_skills never heals on its own: outside a bridge's short settle window after a heal event,
+no code here writes health.
 
 #### Example: an EMS tree on randol_medical's open handlers
 

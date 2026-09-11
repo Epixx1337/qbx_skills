@@ -51,6 +51,7 @@ local function applyStats(fullHeal)
     local stamina = math.min(100, stats.baseStamina + math.min(math.max(synced.bonuses.stamina or 0, 0), stats.staminaCap))
 
     SetEntityMaxHealth(cache.ped, maxHealth)
+    SetPedMaxHealth(cache.ped, maxHealth)
     if fullHeal or GetEntityHealth(cache.ped) > maxHealth then SetEntityHealth(cache.ped, maxHealth) end
     SetPlayerMaxArmour(cache.playerId, maxArmour)
     if GetPedArmour(cache.ped) > maxArmour then SetPedArmour(cache.ped, maxArmour) end
